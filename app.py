@@ -308,11 +308,12 @@ def main() -> None:
         )
         return
 
-    base_path = Path(__file__).parent
-    kv_json_path = base_path / "rag" / "knowledge_vectors.json"
-    kv_gz_path = base_path / "rag" / "knowledge_vectors.json.gz"
-    kv_zip_path = base_path / "rag" / "knowledge_vectors.json.zip"
-    onto_path = base_path / "ontology" / "ontology_esg.yaml"
+base_path = Path(__file__).parent
+kv_json_path = base_path / "rag" / "knowledge_vectors.json"
+kv_gz_path   = base_path / "rag" / "knowledge_vectors.json.gz"
+kv_zip_path  = base_path / "rag" / "knowledge_vectors.zip"
+onto_path    = base_path / "ontology" / "ontology_esg.yaml"
+
 
     # Comprobación rápida para mensajes de error claros
     if not (kv_json_path.exists() or kv_gz_path.exists() or kv_zip_path.exists()):
