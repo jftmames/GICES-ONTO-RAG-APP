@@ -1,0 +1,36 @@
+version: 1
+generated_at: 2025-12-04
+vocabulary: "ESG/CSRD/ESRS Ontology"
+
+concepts:
+  - id: CSRD
+    label: "CSRD – Directiva de Información Corporativa en Materia de Sostenibilidad"
+    type: Framework
+    framework: CSRD
+    description: >
+      Directiva (UE) 2022/2464 que establece las obligaciones generales de reporte
+      de información de sostenibilidad para grandes empresas y determinados emisores.
+    aliases:
+      - "CSRD"
+      - "Directiva 2022/2464"
+      - "Corporate Sustainability Reporting Directive"
+    references:
+      - doc_id: CSRD_2022_2464_ES
+        article: "Art. 1-2"
+        note: "Objeto y ámbito de aplicación"
+
+  - id: DOUBLE_MATERIALITY
+    label: "Doble materialidad"
+    type: Concept
+    framework: CSRD
+    description: >
+      Enfoque que combina materialidad de impacto y materialidad financiera en la
+      identificación de temas de sostenibilidad relevantes.
+    aliases:
+      - "doble materialidad"
+      - "double materiality"
+      - "materialidad de impacto y financiera"
+    references:
+      - doc_id: CSRD_2022_2464_ES
+        article: "Considerandos y Art. 19a"
+        note: "Menciona la doble materialidad"
