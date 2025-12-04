@@ -1,4 +1,6 @@
 import json
+import gzip
+import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -24,14 +26,44 @@ def get_openai_client() -> OpenAI | None:
 # Carga de índice vectorial
 # ---------------------------
 
-def load_knowledge_vectors(path: Path) -> Tuple[List[Dict[str, Any]], np.ndarray]:
+def load_knowledge_vectors(
+    json_path: Path,
+    gz_path: Path,
+    zip_path: Path,
+) -> Tuple[List[Dict[str, Any]], np.ndarray]:
     """
-    Carga rag/knowledge_vectors.json y devuelve:
+    Carga knowledge_vectors desde:
+    - JSON plano (si existe),
+    - o JSON comprimido (.gz),
+    - o ZIP (último recurso).
+
+    Devuelve:
     - docs: lista de dict con texto+metadatos por chunk
     - matrix: matriz numpy con embeddings normalizados (para similitud coseno)
     """
-    with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+
+    if json_path.exists():
+        # Caso ideal: JSON plano
+        with json_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    elif gz_path.exists():
+        # Caso habitual: JSON comprimido con gzip
+        with gzip.open(gz_path, "rt", encoding="utf-8") as f:
+            data = json.load(f)
+    elif zip_path.exists():
+        # Caso alternativo: JSON dentro de un ZIP (primer .json que encontremos)
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            json_names = [n for n in zf.namelist() if n.endswith(".json")]
+            if not json_names:
+                raise FileNotFoundError(
+                    f"El ZIP {zip_path} no contiene ningún archivo .json"
+                )
+            with zf.open(json_names[0]) as f:
+                data = json.load(f)
+    else:
+        raise FileNotFoundError(
+            f"No se ha encontrado ni {json_path}, ni {gz_path}, ni {zip_path}"
+        )
 
     docs: List[Dict[str, Any]] = []
     vectors: List[List[float]] = []
@@ -274,13 +306,19 @@ def main() -> None:
         return
 
     base_path = Path(__file__).parent
-    kv_path = base_path / "rag" / "knowledge_vectors.json"
+    kv_json_path = base_path / "rag" / "knowledge_vectors.json"
+    kv_gz_path = base_path / "rag" / "knowledge_vectors.json.gz"
+    kv_zip_path = base_path / "rag" / "knowledge_vectors.json.zip"
     onto_path = base_path / "ontology" / "ontology_esg.yaml"
 
-    if not kv_path.exists():
+    # Comprobación rápida para mensajes de error claros
+    if not (kv_json_path.exists() or kv_gz_path.exists() or kv_zip_path.exists()):
         st.error(
-            f"No se ha encontrado `{kv_path}`.\n"
-            "Sube el archivo generado por GICES-INGESTA-APP (knowledge_vectors.json) a la carpeta `rag/`."
+            "No se ha encontrado ningún archivo de índice en `rag/`.\n\n"
+            "Sube uno de los siguientes:\n"
+            "- `knowledge_vectors.json`\n"
+            "- `knowledge_vectors.json.gz`\n"
+            "- `knowledge_vectors.json.zip`"
         )
         return
 
@@ -293,7 +331,7 @@ def main() -> None:
 
     @st.cache_resource(show_spinner="Cargando índice normativo…")
     def load_index():
-        return load_knowledge_vectors(kv_path)
+        return load_knowledge_vectors(kv_json_path, kv_gz_path, kv_zip_path)
 
     @st.cache_resource(show_spinner="Cargando ontología ESG/CSRD/ESRS…")
     def load_onto():
@@ -304,50 +342,4 @@ def main() -> None:
 
     st.sidebar.header("Parámetros de búsqueda")
     k_chunks = st.sidebar.slider("Fragmentos normativos a recuperar", 3, 15, 7)
-    k_concepts = st.sidebar.slider("Conceptos ontológicos a mostrar", 1, 10, 5)
-
-    question = st.text_area(
-        "Escribe tu pregunta sobre obligaciones, procesos o métricas de sostenibilidad:",
-        height=120,
-    )
-
-    if st.button("💬 Preguntar", type="primary", use_container_width=True):
-        if not question.strip():
-            st.warning("Escribe una pregunta primero.")
-            return
-
-        with st.spinner("Buscando en la ontología y en la normativa…"):
-            result = answer_with_rag_and_ontology(
-                client=client,
-                docs=docs,
-                matrix=matrix,
-                ontology=ontology,
-                question=question.strip(),
-                k_chunks=k_chunks,
-                k_concepts=k_concepts,
-            )
-
-        st.subheader("Respuesta")
-        st.write(result["answer"])
-
-        st.subheader("Conceptos ontológicos utilizados")
-        if result["concepts"]:
-            for c in result["concepts"]:
-                st.markdown(f"**{c['id']}** — {c.get('label')}")
-                if c.get("description"):
-                    st.write(c["description"])
-                st.markdown("---")
-        else:
-            st.write("No se han identificado conceptos específicos para esta pregunta.")
-
-        st.subheader("Fragmentos normativos utilizados")
-        for h in result["hits"]:
-            st.markdown(
-                f"**{h.get('title', h['doc_id'])} — pág. {h['page']} (score {h['score']:.3f})**"
-            )
-            st.write(h["text"])
-            st.markdown("---")
-
-
-if __name__ == "__main__":
-    main()
+    k_concepts = st.sidebar.slider("Conceptos ontológicos a mostr_
