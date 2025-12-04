@@ -51,14 +51,19 @@ def load_knowledge_vectors(
         with gzip.open(gz_path, "rt", encoding="utf-8") as f:
             data = json.load(f)
     elif zip_path.exists():
-        # Caso alternativo: JSON dentro de un ZIP (primer .json que encontremos)
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            json_names = [n for n in zf.namelist() if n.endswith(".json")]
-            if not json_names:
-                raise FileNotFoundError(
-                    f"El ZIP {zip_path} no contiene ningún archivo .json"
-                )
-            with zf.open(json_names[0]) as f:
+        # Caso alternativo: ZIP o, si está mal, JSON con extensión .zip
+        try:
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                json_names = [n for n in zf.namelist() if n.endswith(".json")]
+                if not json_names:
+                    raise FileNotFoundError(
+                        f"El ZIP {zip_path} no contiene ningún archivo .json"
+                    )
+                with zf.open(json_names[0]) as f:
+                    data = json.load(f)
+        except zipfile.BadZipFile:
+            # Fallback: extensión .zip pero contenido no comprimido.
+            with zip_path.open("r", encoding="utf-8") as f:
                 data = json.load(f)
     else:
         raise FileNotFoundError(
@@ -308,12 +313,11 @@ def main() -> None:
         )
         return
 
-base_path = Path(__file__).parent
-kv_json_path = base_path / "rag" / "knowledge_vectors.json"
-kv_gz_path   = base_path / "rag" / "knowledge_vectors.json.gz"
-kv_zip_path  = base_path / "rag" / "knowledge_vectors.zip"
-onto_path    = base_path / "ontology" / "ontology_esg.yaml"
-
+    base_path = Path(__file__).parent
+    kv_json_path = base_path / "rag" / "knowledge_vectors.json"
+    kv_gz_path = base_path / "rag" / "knowledge_vectors.json.gz"
+    kv_zip_path = base_path / "rag" / "knowledge_vectors.zip"
+    onto_path = base_path / "ontology" / "ontology_esg.yaml"
 
     # Comprobación rápida para mensajes de error claros
     if not (kv_json_path.exists() or kv_gz_path.exists() or kv_zip_path.exists()):
@@ -322,7 +326,7 @@ onto_path    = base_path / "ontology" / "ontology_esg.yaml"
             "Sube uno de los siguientes:\n"
             "- `knowledge_vectors.json`\n"
             "- `knowledge_vectors.json.gz`\n"
-            "- `knowledge_vectors.json.zip`"
+            "- `knowledge_vectors.zip`"
         )
         return
 
