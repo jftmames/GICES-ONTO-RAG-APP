@@ -229,7 +229,10 @@ Si la respuesta no está cubierta por los textos, dilo explícitamente.
 def build_context_text(hits: List[Dict[str, Any]]) -> str:
     partes: List[str] = []
     for h in hits:
-        header = f"[{h.get('title', h['doc_id'])} | pág. {h['page']} | score {h['score']:.3f}]"
+        header = (
+            f"[{h.get('title', h['doc_id'])} | "
+            f"pág. {h['page']} | score {h['score']:.3f}]"
+        )
         partes.append(header)
         partes.append(h["text"])
         partes.append("")
@@ -306,40 +309,4 @@ def main() -> None:
         return
 
     base_path = Path(__file__).parent
-    kv_json_path = base_path / "rag" / "knowledge_vectors.json"
-    kv_gz_path = base_path / "rag" / "knowledge_vectors.json.gz"
-    kv_zip_path = base_path / "rag" / "knowledge_vectors.json.zip"
-    onto_path = base_path / "ontology" / "ontology_esg.yaml"
-
-    # Comprobación rápida para mensajes de error claros
-    if not (kv_json_path.exists() or kv_gz_path.exists() or kv_zip_path.exists()):
-        st.error(
-            "No se ha encontrado ningún archivo de índice en `rag/`.\n\n"
-            "Sube uno de los siguientes:\n"
-            "- `knowledge_vectors.json`\n"
-            "- `knowledge_vectors.json.gz`\n"
-            "- `knowledge_vectors.json.zip`"
-        )
-        return
-
-    if not onto_path.exists():
-        st.error(
-            f"No se ha encontrado `{onto_path}`.\n"
-            "Crea primero la ontología ESG en `ontology/ontology_esg.yaml`."
-        )
-        return
-
-    @st.cache_resource(show_spinner="Cargando índice normativo…")
-    def load_index():
-        return load_knowledge_vectors(kv_json_path, kv_gz_path, kv_zip_path)
-
-    @st.cache_resource(show_spinner="Cargando ontología ESG/CSRD/ESRS…")
-    def load_onto():
-        return load_ontology(onto_path)
-
-    docs, matrix = load_index()
-    ontology = load_onto()
-
-    st.sidebar.header("Parámetros de búsqueda")
-    k_chunks = st.sidebar.slider("Fragmentos normativos a recuperar", 3, 15, 7)
-    k_concepts = st.sidebar.slider("Conceptos ontológicos a mostr_
+    kv_json_path = base_path / "rag" / "knowledge_vec
